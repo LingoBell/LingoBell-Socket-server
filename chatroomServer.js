@@ -6,10 +6,6 @@ var http = require('http');
 const path = require('path')
 var socketIO = require('socket.io');
 
-function generateRoomId() {
-    return Math.random().toString(36).substr(2, 9); // Generate a random string
-}
-
 var fileServer = new nodeStatic.Server();
 const express = require('express');
 const app = express();
@@ -37,7 +33,7 @@ server.listen(port, () => {
 // Socket.IO 서버 설정
 const io = socketIO(server, {
     cors: {
-        origin: '*',// 'https://73b8-59-10-8-230.ngrok-free.app',    // 허용할 클라이언트의 URL
+        origin: ['http://localhost:9000/*', 'https://73b8-59-10-8-230.ngrok-free.app', "https://admin.socket.io", "http://localhost:8000"],// 'https://73b8-59-10-8-230.ngrok-free.app',    // 허용할 클라이언트의 URL
         methods: ['GET', 'POST'],           // 허용할 HTTP 메서드
         allowedHeaders: ['Content-Type'],   // 허용할 HTTP 헤더
     }
@@ -51,7 +47,7 @@ io.sockets.on('connection', function (socket) {
         var array = ['Message from server:'];
         array.push.apply(array, arguments);
         socket.emit('log', array);
-    }
+    };
 
     socket.on('message', function (message) {
         console.log('messgae ')
@@ -65,30 +61,24 @@ io.sockets.on('connection', function (socket) {
         console.log('offer meesage ', roomName)
         console.log(offer)
         socket.to(roomName).emit('OFFER_RECEIVED', offer)
-    })
+    });
 
     socket.on('ANSWER', function ({roomName, answer}) {
         console.log('ANSWER meesage ', roomName)
         socket.to(roomName).emit('ANSWER_RECEIVED', answer)
-    })
+    });
 
     socket.on('CREATE_OR_JOIN', function (roomName) {
         const room = roomName
 
-        console.log('Received request to create or join room ' + room); // 동작1
+        console.log('Received request to create or join room ' + room);
 
         var clientsInRoom = io.sockets.adapter.rooms.get(room);
-        console.log('ddddddddddddddd', io.sockets.adapter.rooms.get(room)); // 동작2
+        console.log('ddddddddddddddd', io.sockets.adapter.rooms.get(room));
         var numClients = clientsInRoom ? clientsInRoom.size : 0;
 
-        // mapObject = io.sockets.adapter.rooms // return Map Js Object
-        // console.log('dddddddddddddddd',mapObject);
-        // clientsInRoom = new Set(mapObject.get(room))
-
-        // var numClients = clientsInRoom ? clientsInRoom.size : 0;
-
-        console.log('clientsInRoom', clientsInRoom);    // 동작3
-        console.log('Room ' + room + ' now has ' + numClients + ' client(s)');  // 동작4
+        console.log('clientsInRoom', clientsInRoom);
+        console.log('Room ' + room + ' now has ' + numClients + ' client(s)');
 
         if (numClients === 0) {
             console.log('new room', room);
@@ -118,7 +108,12 @@ io.sockets.on('connection', function (socket) {
 
     socket.on('CANDIDATE', function ({roomName, candidate}) {
         socket.to(roomName).emit('CANDIDATE_RECEIVED', candidate)
-    })
+    });
+
+    socket.on('LANDMARKS_DATA', function (message) {
+        console.log('Received LANDMARKS_DATA:', message);
+        socket.broadcast.emit('LANDMARKS_DATA_RECEIVED', message);
+    });
 
     socket.on('ipaddr', function () {
         var ifaces = os.networkInterfaces();
@@ -130,9 +125,11 @@ io.sockets.on('connection', function (socket) {
             });
         }
     });
+
     socket.on('DISCONNECTED', (roomName) => {
         socket.to(roomName).emit('OPP_DISCONNECTED')
-    })
+    });
+
     // 클라이언트 연결 해제 처리
     socket.on('disconnect', () => {
 
