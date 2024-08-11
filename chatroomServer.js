@@ -1,5 +1,3 @@
-// 'use strict';
-
 var os = require('os');
 var nodeStatic = require('node-static');
 var http = require('http');
@@ -11,17 +9,12 @@ const express = require('express');
 const app = express();
 const port = 8080;
 
-// 정적 파일을 제공할 폴더 설정
-// app.use(express.static(path.join(__dirname, '../../../LingoBell-FrontEnd/dist')));
+app.use(express.static(path.join(__dirname, '../../../LingoBell-FrontEnd/dist')));
 
-
-// 루트 URL 요청 처리
 app.get('*', (req, res) => {
-    // const indexPath = path.join(__dirname, '../../../LingoBell-FrontEnd/dist/index.html')
-    // const file = require('fs').readFileSync(indexPath, 'utf-8')
-
-    res.status(200).send(file)
-//   res.send('Hello, World!');
+    const indexPath = path.join(__dirname, '../../../LingoBell-FrontEnd/dist/index.html');
+    const file = require('fs').readFileSync(indexPath, 'utf-8');
+    res.status(200).send(file);
 });
 
 const server = http.createServer(app);
@@ -33,16 +26,15 @@ server.listen(port, () => {
 // Socket.IO 서버 설정
 const io = socketIO(server, {
     cors: {
-        origin: ['http://localhost:9000/*', 'https://73b8-59-10-8-230.ngrok-free.app', "https://admin.socket.io", "http://localhost:8000"],// 'https://73b8-59-10-8-230.ngrok-free.app',    // 허용할 클라이언트의 URL
-        methods: ['GET', 'POST'],           // 허용할 HTTP 메서드
-        allowedHeaders: ['Content-Type'],   // 허용할 HTTP 헤더
+        origin: ['http://localhost:9000/*', 'https://73b8-59-10-8-230.ngrok-free.app', "https://admin.socket.io", "http://localhost:8000"],
+        methods: ['GET', 'POST'],
+        allowedHeaders: ['Content-Type'],
     }
 });
 
 io.sockets.on('connection', function (socket) {
     console.log('A user connected:', socket.id);
 
-    // convenience function to log server messages on the client
     function log() {
         var array = ['Message from server:'];
         array.push.apply(array, arguments);
@@ -50,68 +42,47 @@ io.sockets.on('connection', function (socket) {
     };
 
     socket.on('message', function (message) {
-        console.log('messgae ')
-        console.log(message)
-        // console.log('Client said: ', message);
-        // for a real app, would be room-only (not broadcast)
-        socket.to(roomName).emit('message', message);
+        console.log('message:', message);
+        socket.to(message.roomName).emit('message', message);
     });
 
     socket.on('OFFER', function ({roomName, offer}) {
-        console.log('offer meesage ', roomName)
-        console.log(offer)
-        socket.to(roomName).emit('OFFER_RECEIVED', offer)
+        console.log('offer message:', roomName);
+        socket.to(roomName).emit('OFFER_RECEIVED', offer);
     });
 
     socket.on('ANSWER', function ({roomName, answer}) {
-        console.log('ANSWER meesage ', roomName)
-        socket.to(roomName).emit('ANSWER_RECEIVED', answer)
+        console.log('ANSWER message:', roomName);
+        socket.to(roomName).emit('ANSWER_RECEIVED', answer);
     });
 
     socket.on('CREATE_OR_JOIN', function (roomName) {
-        const room = roomName
+        console.log('Received request to create or join room ' + roomName);
 
-        console.log('Received request to create or join room ' + room);
-
-        var clientsInRoom = io.sockets.adapter.rooms.get(room);
-        console.log('ddddddddddddddd', io.sockets.adapter.rooms.get(room));
+        var clientsInRoom = io.sockets.adapter.rooms.get(roomName);
         var numClients = clientsInRoom ? clientsInRoom.size : 0;
 
-        console.log('clientsInRoom', clientsInRoom);
-        console.log('Room ' + room + ' now has ' + numClients + ' client(s)');
+        console.log('Room ' + roomName + ' now has ' + numClients + ' client(s)');
 
         if (numClients === 0) {
-            console.log('new room', room);
-            socket.join(room);
-            console.log('Client ID ' + socket.id + ' created room ' + room);
-            socket.emit('CREATED', room, socket.id);
-
+            socket.join(roomName);
+            console.log('Client ID ' + socket.id + ' created room ' + roomName);
+            socket.emit('CREATED', roomName, socket.id);
         } else if (numClients === 1) {
-            console.log('Client ID ' + socket.id + ' joined room ' + room);
-            // io.sockets.in(room).emit('JOIN', room);
-            // 상대방에게만 보냄
-            socket.join(room);
-            socket.emit('JOINED')
-            // io.sockets.to(room).emit('READY')
-            io.in(roomName).emit('READY')
-            // socket.join(room);
-            // socket.emit('JOINED', room, socket.id);
-            // io.sockets.to(room).emit('ready');
-            
-        } else { // max two clients
-            socket.emit('full', room);
+            socket.join(roomName);
+            console.log('Client ID ' + socket.id + ' joined room ' + roomName);
+            socket.emit('JOINED', roomName, socket.id);
+            io.in(roomName).emit('READY');
+        } else { // 방에 두 명 이상 있을 경우
+            socket.emit('full', roomName);
         }
-        console.log('Current clients in room: ' + room);
-        console.log('clientsInRoom', clientsInRoom);
-        // console.log(`roomCount ${room} now has ${io.sockets.adapter.rooms[room]} client(s)`);
     });
 
     socket.on('CANDIDATE', function ({roomName, candidate}) {
-        socket.to(roomName).emit('CANDIDATE_RECEIVED', candidate)
+        socket.to(roomName).emit('CANDIDATE_RECEIVED', candidate);
     });
 
     socket.on('LANDMARKS_DATA', function (message) {
-        console.log('Received LANDMARKS_DATA:', message);
         socket.broadcast.emit('LANDMARKS_DATA_RECEIVED', message);
     });
 
@@ -127,13 +98,10 @@ io.sockets.on('connection', function (socket) {
     });
 
     socket.on('DISCONNECTED', (roomName) => {
-        socket.to(roomName).emit('OPP_DISCONNECTED')
+        socket.to(roomName).emit('OPP_DISCONNECTED');
     });
 
-    // 클라이언트 연결 해제 처리
     socket.on('disconnect', () => {
-
-        // socket.broadcast.emit('OPP_DISCONNECTED')
         console.log('User disconnected:', socket.id);
     });
 
