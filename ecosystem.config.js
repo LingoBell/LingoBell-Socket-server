@@ -2,7 +2,7 @@ module.exports = {
   apps : [
     {
       name: "rtc_socket",  // Node.js 애플리케이션 이름
-      script: "./socket-server.js",
+      script: "./chatroomServer.js",
       // args: "socket-server.js",  // 실행할 파일
       interpreter: "node",
       env: {
