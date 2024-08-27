@@ -33,7 +33,7 @@ server.listen(port, () => {
 // Socket.IO 서버 설정
 const io = socketIO(server, {
     cors: {
-        origin: ['https://www.lingobell.xyz', 'http://localhost:9000/*', 'https://73b8-59-10-8-230.ngrok-free.app', "https://admin.socket.io", "http://localhost:8000"],// 'https://73b8-59-10-8-230.ngrok-free.app',    // 허용할 클라이언트의 URL
+        origin: ['https://lingobell.xyz', 'https://www.lingobell.xyz', 'http://localhost:9000/*', 'https://73b8-59-10-8-230.ngrok-free.app', "https://admin.socket.io", "http://localhost:8000"],// 'https://73b8-59-10-8-230.ngrok-free.app',    // 허용할 클라이언트의 URL
         methods: ['GET', 'POST', 'PUT'],           // 허용할 HTTP 메서드
         allowedHeaders: ['Content-Type'],   // 허용할 HTTP 헤더
     }
